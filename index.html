@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title img src="logo.png" alt="">Pembuat Kartu Indonesia Sehat - BPJS Kesehatan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+        }
+
+        /* ==================================================
+           KARTU — mengikuti rasio bpjs.jpg (1072 × 672)
+           Kita render di 660 × 413.4 ≈ 660 × 414
+        ================================================== */
+        .kartu {
+            width: 660px;
+            height: 414px;
+            position: relative;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            border-radius: 10px;
+            box-shadow: 0 25px 55px -12px rgba(0, 0, 0, 0.35);
+            flex-shrink: 0;
+        }
+
+        /* Background template penuh */
+        #kartu-bg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+            display: block;
+            z-index: 0;
+        }
+
+        /* Semua overlay di atas gambar */
+        .kartu-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* ── BARCODE ──────────────────────────────────────
+           Kotak putih template: x≈64px, y≈140px, w≈436px, h≈92px
+           (dari gambar 1072×672, disamakan ke 660×414)
+           → x% = 64/1072*100 ≈ 6%,  y% = 140/672*100 ≈ 20.8%
+             w% = 436/1072*100 ≈ 40.7%, h% = 92/672*100 ≈ 13.7%
+        ──────────────────────────────────────────────── */
+        #barcode-wrap {
+            position: absolute;
+            left: 40px;
+            top: 110px;
+            width: 350px;
+            height: 40px;
+        }
+
+        #barcode {
+            display: block;
+            width: 60% !important;
+            height: 100% !important;
+        }
+
+        /* ── DATA FIELDS ──────────────────────────────────  */
+        .kl,
+        .kc,
+        .kf {
+            position: absolute;
+            font-size: 19px;
+            font-weight: normal;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #111;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .kl {
+            left: 40px;
+        }
+
+        .kc {
+            left: 185px;
+        }
+
+        .kf {
+            left: 200px;
+        }
+
+        #ov-nomor {
+            top: 145px;
+            font-weight: bold;
+        }
+
+        #ov-nama {
+            top: 167px;
+        }
+
+        #ov-alamat {
+            top: 189px;
+            font-size: 19px;
+            white-space: pre-wrap;
+            width: 440px;
+            line-height: 1.2;
+        }
+
+        #ov-tgl {
+            top: 233px;
+        }
+
+        #ov-nik {
+            top: 255px;
+        }
+
+        #ov-faskes {
+            top: 277px;
+        }
+
+        /* ==================================================
+           PAGE LAYOUT
+        ================================================== */
+        .form-card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 5px;
+        }
+
+        .field-input {
+            width: 100%;
+            padding: 11px 16px;
+            border: 1.5px solid #d1d5db;
+            border-radius: 12px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+
+        .field-input:focus {
+            border-color: #1a5c38;
+        }
+
+        .btn-download {
+            width: 100%;
+            background: linear-gradient(135deg, #1a3728, #245a3f);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            padding: 15px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .btn-download:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-download:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 py-10">
+    <div class="max-w-7xl mx-auto px-6">
+        <h1 class="text-3xl font-bold text-center mb-10 text-emerald-900"
+            style="display:flex;align-items:center;justify-content:center;gap:12px;">
+            <img src="LOGO-SF.png" alt="Logo SF"
+                style="height:48px;width:auto;object-fit:contain;vertical-align:middle;">
+            Pembuat Kartu Indonesia Sehat (BPJS Kesehatan)
+        </h1>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+
+            <!-- ===== FORM ===== -->
+            <div class="form-card">
+                <h2 class="text-lg font-bold mb-6 text-emerald-800">Isi Data Kartu</h2>
+                <div style="display:flex;flex-direction:column;gap:18px;">
+
+                    <div>
+                        <label class="field-label">Nomor Kartu <span style="color:#6b7280;font-weight:400">(barcode
+                                otomatis mengikuti)</span></label>
+                        <input id="nomor" type="text" class="field-input"
+                            style="font-family:'Courier New',monospace;font-size:16px;letter-spacing:1px;"
+                            value="0000617833462" maxlength="13" placeholder="0000000000000">
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                        <div>
+                            <label class="field-label">Nama Lengkap</label>
+                            <input id="nama" type="text" class="field-input" value="SUHARTI">
+                        </div>
+                        <div>
+                            <label class="field-label">Tanggal Lahir (DD-MM-YYYY)</label>
+                            <input id="tgl_lahir" type="text" class="field-input"
+                                style="font-family:'Courier New',monospace;" value="16-07-1966">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="field-label">Alamat Lengkap</label>
+                        <textarea id="alamat" rows="2" class="field-input"
+                            style="resize:vertical;">BANYUMUDAL RT 07/04 BANYUMUDAL, MOGA, KAB. PEMALANG</textarea>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                        <div>
+                            <label class="field-label">NIK</label>
+                            <input id="nik" type="text" class="field-input" style="font-family:'Courier New',monospace;"
+                                value="3327015607660003" maxlength="16">
+                        </div>
+                        <div>
+                            <label class="field-label">Faskes Tingkat I</label>
+                            <input id="faskes" type="text" class="field-input" value="Banyumudal">
+                        </div>
+                    </div>
+
+                    <div style="padding-top:8px;">
+                        <button class="btn-download" onclick="downloadKartu()">
+                            ⬇️ DOWNLOAD KARTU SEBAGAI JPG
+                        </button>
+                    </div>
+
+                    <p style="font-size:11px;color:#9ca3af;text-align:center;">
+                        Preview berubah secara real-time · Barcode otomatis mengikuti nomor kartu
+                    </p>
+                </div>
+            </div>
+
+            <!-- ===== PREVIEW KARTU ===== -->
+            <div style="display:flex;flex-direction:column;align-items:flex-start;gap:16px;">
+
+                <div id="preview-container" class="kartu">
+
+                    <!-- Template bpjs.jpg sebagai background -->
+                    <img id="kartu-bg" src="bpjs.jpg" alt="Template KIS" crossorigin="anonymous">
+
+                    <!-- Overlay data + barcode -->
+                    <div class="kartu-overlay">
+
+                        <!-- BARCODE — menyesuaikan kotak putih di template -->
+                        <div id="barcode-wrap">
+                            <canvas id="barcode"></canvas>
+                        </div>
+
+                        <!-- LABELS & COLONS -->
+                        <span class="kl" style="top: 145px;">Nomor Kartu</span>
+                        <span class="kc" style="top: 145px;">:</span>
+
+                        <span class="kl" style="top: 167px;">Nama</span>
+                        <span class="kc" style="top: 167px;">:</span>
+
+                        <span class="kl" style="top: 189px;">Alamat</span>
+                        <span class="kc" style="top: 189px;">:</span>
+
+                        <span class="kl" style="top: 233px;">Tanggal Lahir</span>
+                        <span class="kc" style="top: 233px;">:</span>
+
+                        <span class="kl" style="top: 255px;">NIK</span>
+                        <span class="kc" style="top: 255px;">:</span>
+
+                        <span class="kl" style="top: 277px;">Faskes I</span>
+                        <span class="kc" style="top: 277px;">:</span>
+
+                        <!-- FIELD VALUES -->
+                        <span class="kf" id="ov-nomor" style="top: 145px;">0000617833462</span>
+                        <span class="kf" id="ov-nama" style="top: 167px;">SUHARTI</span>
+                        <span class="kf" id="ov-alamat" style="top: 189px;">BANYUMUDAL RT 07/04 BANYUMUDAL, MOGA, KAB.
+                            PEMALANG</span>
+                        <span class="kf" id="ov-tgl" style="top: 233px;">16-07-1966</span>
+                        <span class="kf" id="ov-nik" style="top: 255px;">3327015607660003</span>
+                        <span class="kf" id="ov-faskes" style="top: 277px;">Banyumudal</span>
+                    </div>
+                </div>
+
+                <p style="font-size:11px;color:#9ca3af;max-width:380px;">
+                    Preview berubah secara real-time saat mengisi form.<br>
+                    Klik tombol <strong>Download</strong> untuk menyimpan sebagai JPG siap cetak.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ─────────────────────────────────────────────────────
+           Barcode — generate ulang setiap kali nomor berubah
+        ───────────────────────────────────────────────────── */
+        function generateBarcode(nomor) {
+            const canvas = document.getElementById('barcode');
+            if (!canvas) return;
+
+            if (nomor && nomor.length >= 6) {
+                try {
+                    JsBarcode(canvas, nomor, {
+                        format: "CODE128",
+                        lineColor: "#111111",
+                        background: "#ffffff",
+                        width: 10,
+                        height: 20,
+                        displayValue: false,
+                        margin: 5
+                    });
+                    canvas.style.display = 'block';
+                } catch (e) {
+                    console.warn('Barcode error:', e);
+                }
+            } else {
+                // Kosongkan jika nomor terlalu pendek
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        /* ─────────────────────────────────────────────────────
+           Update semua field preview
+        ───────────────────────────────────────────────────── */
+        function updatePreview() {
+            const nomor = document.getElementById('nomor').value.trim();
+
+            // Update teks overlay
+            document.getElementById('ov-nomor').textContent = nomor || '';
+            document.getElementById('ov-nama').textContent = document.getElementById('nama').value || '';
+            document.getElementById('ov-alamat').textContent = document.getElementById('alamat').value || '';
+            document.getElementById('ov-tgl').textContent = document.getElementById('tgl_lahir').value || '';
+            document.getElementById('ov-nik').textContent = document.getElementById('nik').value || '';
+            document.getElementById('ov-faskes').textContent = document.getElementById('faskes').value || '';
+
+            // Update barcode sesuai nomor kartu
+            generateBarcode(nomor);
+        }
+
+        /* ─────────────────────────────────────────────────────
+           Download sebagai JPG (scale 3× agar tajam dicetak)
+        ───────────────────────────────────────────────────── */
+        function downloadKartu() {
+            const kartu = document.getElementById('preview-container');
+            const nama = document.getElementById('nama').value || 'PESERTA';
+
+            html2canvas(kartu, {
+                scale: 3,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `KIS_${nama.replace(/\s+/g, '_')}.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 1.0);
+                link.click();
+            });
+        }
+
+        /* ─────────────────────────────────────────────────────
+           Event listeners — update saat user mengetik
+        ───────────────────────────────────────────────────── */
+        function setupListeners() {
+            document.querySelectorAll('input, textarea').forEach(el => {
+                el.addEventListener('input', updatePreview);
+                el.addEventListener('change', updatePreview);
+            });
+        }
+
+        window.onload = function () {
+            updatePreview();   // tampilkan nilai default
+            setupListeners();
+            console.log('%c✅ KIS Maker siap — barcode mengikuti nomor kartu', 'color:#10b981;font-weight:bold');
+        };
+    </script>
+</body>
+
+</html>
